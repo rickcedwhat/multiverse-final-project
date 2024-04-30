@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { ReminderDB } from "../api";
-import { Button, Card, CardContent, SxProps, Typography } from "@mui/material";
+import { Button, Card, CardContent, Typography, Stack } from "@mui/material";
 
 interface ReminderProps {
   reminder: ReminderDB;
@@ -21,7 +21,10 @@ const Reminder: React.FC<ReminderProps> = ({
     await onDelete(id);
   };
 
-  const sx: Record<string, unknown> = {};
+  const sx: Record<string, unknown> = {
+    margin: "1rem",
+    border: "1px solid black",
+  };
 
   if (isSending) {
     sx.opacity = 0.5;
@@ -35,16 +38,18 @@ const Reminder: React.FC<ReminderProps> = ({
         </Typography>
         <Typography color="textSecondary">{datetime.toString()}</Typography>
         <Typography color="textSecondary">{email}</Typography>
-        <Button variant="contained" color="error" onClick={handleDelete}>
-          Delete
-        </Button>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={() => openPopup(reminder)}
-        >
-          Edit
-        </Button>
+        <Stack spacing={2} direction="row">
+          <Button variant="contained" color="error" onClick={handleDelete}>
+            Delete
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => openPopup(reminder)}
+          >
+            Edit
+          </Button>
+        </Stack>
       </CardContent>
     </Card>
   );

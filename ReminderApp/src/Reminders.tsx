@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Reminder } from "./Reminder";
-import { Stack, Button, Typography, TextField } from "@mui/material";
+import { Stack, Button, Typography, TextField, Grid } from "@mui/material";
 import {
   useQuery,
   useMutation,
@@ -12,6 +12,7 @@ import {
   getReminders,
   postReminder,
   deleteReminder,
+  editReminder,
   ReminderDB,
 } from "../api.js";
 import { ReminderPopup } from "./ReminderPopup";
@@ -44,6 +45,22 @@ const Reminders = () => {
     },
   });
 
+  const editMutation = useMutation({
+    mutationFn: async ({
+      reminder,
+      id,
+    }: {
+      reminder: ReminderDB;
+      id: number;
+    }) => {
+      await editReminder(id, reminder);
+    },
+    onSuccess: () => {
+      // Invalidate and refetch
+      queryClient.invalidateQueries({ queryKey: ["reminders"] });
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: deleteReminder,
     onSuccess: () => {
@@ -62,28 +79,25 @@ const Reminders = () => {
     email: "",
   };
 
+  console.log({ currentReminder });
+
   return (
     <>
       <h1>Hello, React!</h1>
       {isPending && <p>Loading...</p>}
       {isError && <p>Error: {String(error)}</p>}
-      {reminders?.map((reminder) => (
-        <Reminder
-          key={reminder.id}
-          reminder={reminder}
-          onDelete={handleDelete}
-          openPopup={() => setCurrentReminder(reminder)}
-        />
-      ))}
+      <Grid container spacing={2} flexDirection="row" margin={2} gap={2}>
+        {reminders?.map((reminder) => (
+          <Reminder
+            key={reminder.id}
+            reminder={reminder}
+            onDelete={handleDelete}
+            openPopup={() => setCurrentReminder(reminder)}
+          />
+        ))}
+      </Grid>
       <Button
         variant="contained"
-        // onClick={() =>
-        //   postMutation.mutate({
-        //     message: "Hello, world!",
-        //     datetime: new Date(),
-        //     email: "ccata002@gmail.com",
-        //   })
-        // }
         onClick={() => setCurrentReminder(newReminder)}
       >
         Add Reminder
@@ -92,7 +106,7 @@ const Reminders = () => {
         <ReminderPopup
           open={true}
           onClose={() => setCurrentReminder(null)}
-          postMutation={postMutation}
+          mutations={{ post: postMutation, edit: editMutation }}
           initialReminder={currentReminder}
         />
       )}

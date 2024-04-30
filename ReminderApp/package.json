@@ -11,6 +11,7 @@
   "license": "ISC",
   "devDependencies": {
     "@types/css-modules": "^1.0.5",
+    "@vitejs/plugin-react": "^4.2.1",
     "concurrently": "^8.2.2",
     "vite": "^5.2.10"
   },

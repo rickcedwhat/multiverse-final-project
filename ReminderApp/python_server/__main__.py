@@ -9,6 +9,7 @@ class Reminder(BaseModel):
     message: str
     email: str
     datetime: str
+    # is_active: bool
 
 app = FastAPI()
 
@@ -90,6 +91,35 @@ def create_reminder(reminder:Reminder):
         "datetime": reminder.datetime
     }
 
+@app.put("/reminders/{id}")
+def update_reminder(id:int, reminder:Reminder):
+    print("Updating reminder")
+
+    print(reminder)
+
+    datetime_obj = datetime.fromisoformat(reminder.datetime)
+
+    # Establish a connection to the SQL Server
+    conn = pyodbc.connect(conn_str)
+    cursor = conn.cursor()
+
+    # Execute the UPDATE statement
+    cursor.execute("UPDATE Reminders SET message = ?, email = ?, datetime = ? WHERE id = ?",
+                   reminder.message, reminder.email, datetime_obj, id)
+
+    # Commit the transaction
+    conn.commit()
+
+    # Close the connection
+    conn.close()
+
+    return {
+        "id": id,
+        "message": reminder.message,
+        "email": reminder.email,
+        "datetime": reminder.datetime
+    }
+
 @app.delete("/reminders/{id}")
 def delete_reminder(id:int):
     print("Deleting reminder")
@@ -111,6 +141,12 @@ def delete_reminder(id:int):
         "status": "success"
     }
 
-# if __name__ == "__main__":
-#     uvicorn.run("__main__:app", host="0.0.0.0", port=8000, reload=True)
-#     print("Server running on http://localhost:8000")
+# // added more endpoints in the backend and added ways to connect with them on the frontend
+
+# - added a form to create a new reminder or edit an existing one
+
+# - added a way to delete a reminder
+
+# - need to make sure the sql server automations I set up the other day are working
+
+# saved my project to its own repo - need to add michael as a collaborator
