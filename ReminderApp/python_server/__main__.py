@@ -1,21 +1,27 @@
 import pyodbc
+import schedule
+import time
 from pydantic import BaseModel
 from datetime import datetime
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
 
 class Reminder(BaseModel):
     message: str
     email: str
     datetime: str
-    # is_active: bool
 
 app = FastAPI()
 
+# Configure CORS
+origins = [
+    "http://localhost:5173",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=origins,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -62,8 +68,8 @@ def read_reminders():
 @app.post("/reminders")
 def create_reminder(reminder:Reminder):
     print("Creating reminder")
-    
-    datetime_obj = datetime.fromisoformat(reminder.datetime)
+
+    datetime_obj = datetime.strptime(reminder.datetime, "%a %b %d %Y %H:%M:%S GMT%z (%Z)")
 
     # Establish a connection to the SQL Server
     conn = pyodbc.connect(conn_str)
@@ -95,9 +101,7 @@ def create_reminder(reminder:Reminder):
 def update_reminder(id:int, reminder:Reminder):
     print("Updating reminder")
 
-    print(reminder)
-
-    datetime_obj = datetime.fromisoformat(reminder.datetime)
+    datetime_obj = datetime.strptime(reminder.datetime, "%a %b %d %Y %H:%M:%S GMT%z (%Z)")
 
     # Establish a connection to the SQL Server
     conn = pyodbc.connect(conn_str)
@@ -141,12 +145,24 @@ def delete_reminder(id:int):
         "status": "success"
     }
 
-# // added more endpoints in the backend and added ways to connect with them on the frontend
+@app.delete("/reminders")
+def delete_all_reminders():
+    print("Deleting all reminders")
 
-# - added a form to create a new reminder or edit an existing one
+    # Establish a connection to the SQL Server
+    conn = pyodbc.connect(conn_str)
+    cursor = conn.cursor()
 
-# - added a way to delete a reminder
+    # Execute the DELETE statement
+    cursor.execute("DELETE FROM Reminders")
 
-# - need to make sure the sql server automations I set up the other day are working
+    # Commit the transaction
+    conn.commit()
 
-# saved my project to its own repo - need to add michael as a collaborator
+    # Close the connection
+    conn.close()
+
+    return {
+        "status": "success"
+    }
+

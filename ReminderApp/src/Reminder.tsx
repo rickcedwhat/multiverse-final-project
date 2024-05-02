@@ -19,6 +19,7 @@ const Reminder: React.FC<ReminderProps> = ({
   const handleDelete = async () => {
     setIsSending(true);
     await onDelete(id);
+    setIsSending(false);
   };
 
   const sx: Record<string, unknown> = {

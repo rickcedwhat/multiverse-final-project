@@ -1,21 +1,17 @@
 import React, { useState } from "react";
 import { Reminder } from "./Reminder";
 import { Stack, Button, Typography, TextField, Grid } from "@mui/material";
-import {
-  useQuery,
-  useMutation,
-  useQueryClient,
-  QueryClient,
-  QueryClientProvider,
-} from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getReminders,
   postReminder,
   deleteReminder,
   editReminder,
+  deleteAllReminders,
   ReminderDB,
 } from "../api.js";
 import { ReminderPopup } from "./ReminderPopup";
+import { useConfirmation } from "./Confrimation";
 
 const Reminders = () => {
   const queryClient = useQueryClient();
@@ -23,7 +19,10 @@ const Reminders = () => {
     ReminderDB | Partial<ReminderDB> | null
   >(null);
 
-  //   TODO: Add a form to add or edit a reminder
+  const { confirmation, showConfirmation } = useConfirmation({
+    message: "Are you sure you want to delete all reminders?",
+    onConfirm: () => deleteAllReminders(),
+  });
 
   // Queries
   const {
@@ -75,11 +74,9 @@ const Reminders = () => {
 
   const newReminder: Partial<ReminderDB> = {
     message: "New Reminder",
-    datetime: new Date(),
+    datetime: new Date(Date.now() + 60 * 60 * 1000),
     email: "",
   };
-
-  console.log({ currentReminder });
 
   return (
     <>
@@ -102,6 +99,10 @@ const Reminders = () => {
       >
         Add Reminder
       </Button>
+      <Button variant="contained" onClick={showConfirmation}>
+        Delete All
+      </Button>
+      {confirmation}
       {currentReminder && (
         <ReminderPopup
           open={true}

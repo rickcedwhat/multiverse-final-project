@@ -53,14 +53,8 @@ const ReminderPopup: React.FC<ReminderPopupProps> = ({
       const updatedReminder = {
         message: data.message,
         email: data.email,
-        datetime: data.datetime.toDate(),
+        datetime: data.datetime.toDate().toString(),
       };
-      console.log(
-        data.datetime,
-        data.datetime.toDate(),
-        data.datetime.toISOString(),
-        updatedReminder
-      );
       mutations.edit.mutateAsync({
         reminder: updatedReminder,
         id: initialReminder.id,
@@ -70,7 +64,7 @@ const ReminderPopup: React.FC<ReminderPopupProps> = ({
       const newReminder = {
         message: data.message,
         email: data.email,
-        datetime: data.datetime.toDate(),
+        datetime: data.datetime.toDate().toString(),
       };
       mutations.post.mutateAsync(newReminder);
     }

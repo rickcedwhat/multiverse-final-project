@@ -8,6 +8,7 @@ export interface ReminderDB {
 export async function getReminders() {
   const response = await fetch("http://localhost:8000/reminders");
   const data = await response.json();
+  console.log("get reminders", { data });
   return data;
 }
 
@@ -37,6 +38,14 @@ export async function postReminder(reminder: Partial<ReminderDB>) {
 
 export async function deleteReminder(id: number) {
   const response = await fetch(`http://localhost:8000/reminders/${id}`, {
+    method: "DELETE",
+  });
+  const data = await response.json();
+  return data;
+}
+
+export async function deleteAllReminders() {
+  const response = await fetch(`http://localhost:8000/reminders`, {
     method: "DELETE",
   });
   const data = await response.json();
