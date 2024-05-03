@@ -35,7 +35,12 @@ const ReminderPopup: React.FC<ReminderPopupProps> = ({
   initialReminder,
   mutations,
 }) => {
-  const { register, handleSubmit, control } = useForm({
+  const {
+    register,
+    handleSubmit,
+    control,
+    formState: { errors },
+  } = useForm({
     defaultValues: {
       message: initialReminder?.message || "",
       email: initialReminder?.email || "",
@@ -79,14 +84,24 @@ const ReminderPopup: React.FC<ReminderPopupProps> = ({
       <DialogContent>
         <Stack spacing={2} direction="column" margin={2}>
           <TextField
-            {...register("message", { required: true })}
+            {...register("message", { required: "Message is required" })}
             label="Message"
             fullWidth
+            helperText={errors.message?.message}
+            error={!!errors.message}
           />
           <TextField
-            {...register("email", { required: true })}
+            {...register("email", {
+              required: "Email is required",
+              validate: (value) => {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                return emailRegex.test(value) || "Invalid email";
+              },
+            })}
             label="Email"
             fullWidth
+            helperText={errors.email?.message}
+            error={!!errors.email}
           />
           <Controller
             name="datetime"

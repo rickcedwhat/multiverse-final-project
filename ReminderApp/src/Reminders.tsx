@@ -72,10 +72,13 @@ const Reminders = () => {
     await deleteMutation.mutateAsync(id);
   };
 
-  const newReminder: Partial<ReminderDB> = {
-    message: "New Reminder",
-    datetime: new Date(Date.now() + 60 * 60 * 1000),
-    email: "",
+  const createNewReminder = () => {
+    const newReminder: Partial<ReminderDB> = {
+      message: "New Reminder",
+      datetime: new Date(Date.now() + 60 * 60 * 1000),
+      email: "",
+    };
+    setCurrentReminder(newReminder);
   };
 
   return (
@@ -93,10 +96,7 @@ const Reminders = () => {
           />
         ))}
       </Grid>
-      <Button
-        variant="contained"
-        onClick={() => setCurrentReminder(newReminder)}
-      >
+      <Button variant="contained" onClick={createNewReminder}>
         Add Reminder
       </Button>
       <Button variant="contained" onClick={showConfirmation}>

@@ -5,6 +5,10 @@ import time
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import dotenv
+import os
+
+dotenv.load_dotenv()
 
 conn_str = (
     r'DRIVER={SQL Server};'
@@ -29,7 +33,9 @@ def get_rows():
     return rows if rows else None
 
 def job():
+    print("getting rows")
     rows = get_rows()
+    print(rows)
     if rows:
         conn = pyodbc.connect(conn_str)
         cursor = conn.cursor()
@@ -39,16 +45,19 @@ def job():
             email = row[2]
             datetime = row[3]
             print(f"Sending reminder: {message} to {email} at {datetime}")
+            send_email(email, "Reminder", message)
             cursor.execute("DELETE FROM Reminders WHERE id = ?", id)
         conn.commit()
         conn.close()
     else:
         print("No reminders to send")
 
-def send_email(sender_email, sender_password, recipient_email, subject, body):
+def send_email(recipient_email, subject, body):
     # Set up the SMTP server
     smtp_server = "smtp.gmail.com"
     smtp_port = 587
+    sender_email = os.getenv("EMAIL")
+    sender_password = os.getenv("PASSWORD")
 
     # Create a MIME message
     msg = MIMEMultipart()

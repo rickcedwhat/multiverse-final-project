@@ -165,4 +165,3 @@ def delete_all_reminders():
     return {
         "status": "success"
     }
-
