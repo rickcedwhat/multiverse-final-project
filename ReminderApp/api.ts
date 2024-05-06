@@ -3,12 +3,12 @@ export interface ReminderDB {
   message: string;
   datetime: Date;
   email: string;
+  phone: string;
 }
 
 export async function getReminders() {
   const response = await fetch("http://localhost:8000/reminders");
   const data = await response.json();
-  console.log("get reminders", { data });
   return data;
 }
 
@@ -32,6 +32,10 @@ export async function postReminder(reminder: Partial<ReminderDB>) {
     },
     body: JSON.stringify(reminder),
   });
+  if (!response.ok) {
+    // get error message
+    throw new Error(response.statusText);
+  }
   const data = await response.json();
   return data;
 }

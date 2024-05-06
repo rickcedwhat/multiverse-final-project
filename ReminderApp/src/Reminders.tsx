@@ -21,7 +21,13 @@ const Reminders = () => {
 
   const { confirmation, showConfirmation } = useConfirmation({
     message: "Are you sure you want to delete all reminders?",
-    onConfirm: () => deleteAllReminders(),
+    confirmConfig: {
+      text: "Confirm Deletion",
+      action: deleteAllReminders,
+      variant: "contained",
+      color: "error",
+    },
+    cancelConfig: { variant: "outlined" },
   });
 
   // Queries
@@ -40,7 +46,11 @@ const Reminders = () => {
     mutationFn: postReminder,
     onSuccess: () => {
       // Invalidate and refetch
+      console.log("Success");
       queryClient.invalidateQueries({ queryKey: ["reminders"] });
+    },
+    onError: (error) => {
+      console.error("error", { error });
     },
   });
 
@@ -77,6 +87,7 @@ const Reminders = () => {
       message: "New Reminder",
       datetime: new Date(Date.now() + 60 * 60 * 1000),
       email: "",
+      phone: "",
     };
     setCurrentReminder(newReminder);
   };

@@ -3,6 +3,7 @@ import { ReminderDB } from "../api";
 import { Button, Card, CardContent, Typography, Stack } from "@mui/material";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
+import { useConfirmation } from "./Confrimation";
 
 dayjs.extend(relativeTime);
 
@@ -17,14 +18,24 @@ const Reminder: React.FC<ReminderProps> = ({
   onDelete,
   openPopup,
 }) => {
-  const { id, message, datetime, email } = reminder;
-  const [isSending, setIsSending] = useState(false);
+  const { id, message, datetime, email, phone } = reminder;
 
   const handleDelete = async () => {
     setIsSending(true);
     await onDelete(id);
     setIsSending(false);
   };
+
+  const { confirmation, showConfirmation } = useConfirmation({
+    message: "Are you sure you want to delete this reminder?",
+    confirmConfig: {
+      text: "Confirm Deletion",
+      color: "error",
+      action: handleDelete,
+    },
+  });
+
+  const [isSending, setIsSending] = useState(false);
 
   const sx: Record<string, unknown> = {
     margin: "1rem",
@@ -50,8 +61,9 @@ const Reminder: React.FC<ReminderProps> = ({
           {dayjs(datetime).fromNow()}
         </Typography>
         <Typography color="textSecondary">{email}</Typography>
+        <Typography color="textSecondary">{phone}</Typography>
         <Stack spacing={2} direction="row">
-          <Button variant="contained" color="error" onClick={handleDelete}>
+          <Button variant="contained" color="error" onClick={showConfirmation}>
             Delete
           </Button>
           <Button
@@ -61,6 +73,7 @@ const Reminder: React.FC<ReminderProps> = ({
           >
             Edit
           </Button>
+          {confirmation}
         </Stack>
       </CardContent>
     </Card>

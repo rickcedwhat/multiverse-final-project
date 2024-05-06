@@ -13,33 +13,44 @@ import {
 
 type useConfirmationProps = {
   message: string;
-  onConfirm: () => void;
-  onCancel?: () => void;
+  confirmConfig?: ConfirmConfigProps;
+  cancelConfig?: ConfirmConfigProps;
+};
+
+type ConfirmConfigProps = {
+  text?: string;
+  action?: () => void;
+  [key: string]: any;
+};
+
+const defaultConfirmConfig = {
+  text: "Confirm",
+  action: () => {},
+};
+
+const defaultCancelConfig = {
+  text: "Cancel",
+  action: () => {},
+  variant: "outlined",
 };
 
 const useConfirmation = ({
   message,
-  onConfirm,
-  onCancel = () => {},
+  confirmConfig = defaultConfirmConfig,
+  cancelConfig = defaultCancelConfig,
 }: useConfirmationProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
-  const handleConfirm = () => {
-    setIsOpen(false);
-    onConfirm();
-  };
-
-  const handleCancel = () => {
-    setIsOpen(false);
-    onCancel();
-  };
+  confirmConfig = { ...defaultConfirmConfig, ...confirmConfig };
+  cancelConfig = { ...defaultCancelConfig, ...cancelConfig };
 
   const confirmation = (
     <Confirmation
       message={message}
-      onConfirm={handleConfirm}
-      onCancel={handleCancel}
+      confirmConfig={confirmConfig}
+      cancelConfig={cancelConfig}
       isOpen={isOpen}
+      setIsOpen={setIsOpen}
     />
   );
 
@@ -48,31 +59,67 @@ const useConfirmation = ({
 
 type ConfirmationProps = {
   message: string;
-  onConfirm: () => void;
-  onCancel: () => void;
+  confirmConfig: ConfirmConfigProps;
+  cancelConfig: ConfirmConfigProps;
   isOpen: boolean;
+  setIsOpen: (isOpen: boolean) => void;
 };
 
 const Confirmation = ({
   message,
-  onConfirm,
-  onCancel,
   isOpen,
+  setIsOpen,
+  confirmConfig,
+  cancelConfig,
 }: ConfirmationProps) => {
+  const {
+    text: confirmText,
+    action: onConfirm,
+    ...confirmButtonProps
+  } = confirmConfig;
+  const {
+    text: cancelText,
+    action: onCancel,
+    ...cancelButtonProps
+  } = cancelConfig;
+
+  const handleConfirm = () => {
+    setIsOpen(false);
+    confirmConfig.action!();
+  };
+
+  const handleCancel = () => {
+    setIsOpen(false);
+    cancelConfig.action!();
+  };
+
   return (
-    <Dialog open={isOpen}>
+    <Dialog
+      open={isOpen}
+      onClose={() => setIsOpen(false)}
+      fullWidth
+      maxWidth="xs"
+    >
       <DialogTitle>Confirmation</DialogTitle>
       <DialogContent>
-        <Stack>
-          <Typography>{message}</Typography>
-          <Button variant="contained" onClick={onConfirm}>
-            Yes
-          </Button>
-          <Button variant="contained" onClick={onCancel}>
-            No
-          </Button>
-        </Stack>
+        <Typography>{message}</Typography>
       </DialogContent>
+      <DialogActions>
+        <Button
+          variant="contained"
+          onClick={handleConfirm}
+          {...confirmButtonProps}
+        >
+          {confirmText}
+        </Button>
+        <Button
+          variant="contained"
+          onClick={handleCancel}
+          {...cancelButtonProps}
+        >
+          {cancelText}
+        </Button>
+      </DialogActions>
     </Dialog>
   );
 };

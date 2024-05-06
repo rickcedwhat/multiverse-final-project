@@ -7,6 +7,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import dotenv
 import os
+from twilio.rest import Client
 
 dotenv.load_dotenv()
 
@@ -46,6 +47,7 @@ def job():
             datetime = row[3]
             print(f"Sending reminder: {message} to {email} at {datetime}")
             send_email(email, "Reminder", message)
+            send_sms("7864400382", message)
             cursor.execute("DELETE FROM Reminders WHERE id = ?", id)
         conn.commit()
         conn.close()
@@ -73,6 +75,21 @@ def send_email(recipient_email, subject, body):
         server.starttls()
         server.login(sender_email, sender_password)
         server.send_message(msg)
+
+def send_sms(recipient_phone, body):
+    account_sid = os.getenv("TWILIO_ACCOUNT_SID")
+    auth_token = os.getenv("TWILIO_AUTH_TOKEN")
+    twilio_phone = os.getenv("TWILIO_PHONE")
+
+    client = Client(account_sid, auth_token)
+
+    message = client.messages.create(
+        body=body,
+        from_=twilio_phone,
+        to=recipient_phone
+    )
+
+    print(message.sid)
 
 
 if __name__ == "__main__":
