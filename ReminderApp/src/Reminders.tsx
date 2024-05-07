@@ -86,8 +86,8 @@ const Reminders = () => {
     const newReminder: Partial<ReminderDB> = {
       message: "New Reminder",
       datetime: new Date(Date.now() + 60 * 60 * 1000),
-      email: "",
-      phone: "",
+      email: "ccata002@gmail.com",
+      phone: "7864400382",
     };
     setCurrentReminder(newReminder);
   };

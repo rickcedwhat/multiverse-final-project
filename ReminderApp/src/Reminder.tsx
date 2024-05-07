@@ -51,9 +51,8 @@ const Reminder: React.FC<ReminderProps> = ({
   return (
     <Card sx={sx}>
       <CardContent>
-        <Typography variant="h5" component="h2">
-          {message}
-        </Typography>
+        <Typography variant="caption">{id}</Typography>
+        <Typography variant="h5">{message}</Typography>
         <Typography color="textSecondary">
           {dayjs(datetime).format("ddd MMM Do h:mm A")}
         </Typography>
