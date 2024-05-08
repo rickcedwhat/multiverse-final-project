@@ -1,10 +1,9 @@
 import pyodbc
-import schedule
 import time
 from pydantic import BaseModel, field_validator
 import re
 from datetime import datetime
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 class Reminder(BaseModel):
@@ -86,7 +85,7 @@ def read_reminders():
 
 @app.post("/reminders")
 def create_reminder(reminder:Reminder):
-    print("Creating reminder")
+    print("Creating reminder",reminder)
 
     datetime_obj = datetime.strptime(reminder.datetime, "%a %b %d %Y %H:%M:%S GMT%z (%Z)")
 
@@ -119,16 +118,14 @@ def create_reminder(reminder:Reminder):
 
 @app.put("/reminders/{id}")
 def update_reminder(id:int, reminder:Reminder):
-    print("Updating reminder")
+    print("Updating reminder",reminder,id)
 
     datetime_obj = datetime.strptime(reminder.datetime, "%a %b %d %Y %H:%M:%S GMT%z (%Z)")
 
     # Establish a connection to the SQL Server
     conn = pyodbc.connect(conn_str)
     cursor = conn.cursor()
-
-    print(reminder)
-
+    
     # Execute the UPDATE statement
     cursor.execute("UPDATE Reminders SET message = ?, email = ?, datetime = ?, phone = ? WHERE id = ?",
                    reminder.message, reminder.email, datetime_obj, reminder.phone, id)
@@ -149,7 +146,7 @@ def update_reminder(id:int, reminder:Reminder):
 
 @app.delete("/reminders/{id}")
 def delete_reminder(id:int):
-    print("Deleting reminder")
+    print("Deleting reminder", id)
 
     # Establish a connection to the SQL Server
     conn = pyodbc.connect(conn_str)

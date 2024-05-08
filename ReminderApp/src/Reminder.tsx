@@ -49,18 +49,24 @@ const Reminder: React.FC<ReminderProps> = ({
   console.log({ datetime, dayjs });
 
   return (
-    <Card sx={sx}>
+    <Card sx={sx} data-id={`reminder-${id}`}>
       <CardContent>
         <Typography variant="caption">{id}</Typography>
-        <Typography variant="h5">{message}</Typography>
-        <Typography color="textSecondary">
-          {dayjs(datetime).format("ddd MMM Do h:mm A")}
+        <Typography variant="h5" data-id="message">
+          {message}
+        </Typography>
+        <Typography color="textSecondary" data-id="datetime">
+          {dayjs(datetime).format("ddd MMM Do YYYY h:mm A")}
         </Typography>
         <Typography color="textSecondary">
           {dayjs(datetime).fromNow()}
         </Typography>
-        <Typography color="textSecondary">{email}</Typography>
-        <Typography color="textSecondary">{phone}</Typography>
+        <Typography color="textSecondary" data-id="email">
+          {email}
+        </Typography>
+        <Typography color="textSecondary" data-id="phone">
+          {phone}
+        </Typography>
         <Stack spacing={2} direction="row">
           <Button variant="contained" color="error" onClick={showConfirmation}>
             Delete

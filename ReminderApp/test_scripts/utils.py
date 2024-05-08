@@ -3,7 +3,9 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from time import sleep
-from datetime import datetime
+from datetime import datetime, timedelta
+import random
+
 
 
 conn_str = (
@@ -13,8 +15,32 @@ conn_str = (
     r'Trusted_Connection=yes;'
 )
 
+def seed_reminders(reminders):
+    conn = pyodbc.connect(conn_str)
+    cursor = conn.cursor()
+    for reminder in reminders:
+        cursor.execute("INSERT INTO Reminders (message,email,datetime,phone) VALUES (?,?,?,?)",reminder["message"],reminder["email"],reminder["datetime"],reminder["phone"])
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+def drop_reminders(replacement=None):
+    
+    # table_columns = [("id", "INT PRIMARY KEY IDENTITY"), ("message", "VARCHAR(255)"), ("email", "VARCHAR(255)"), ("datetime", "DATETIME"), ("phone", "VARCHAR(255)")]
+    # cursor.execute("CREATE TABLE Reminders ({})".format(", ".join([f"{column[0]} {column[1]}" for column in table_columns])))
+    conn = pyodbc.connect(conn_str)
+    cursor = conn.cursor()
+    cursor.execute("DROP TABLE Reminders")
+    cursor.execute("CREATE TABLE Reminders (id INT PRIMARY KEY IDENTITY, message VARCHAR(255), email VARCHAR(255), datetime DATETIME, phone VARCHAR(255))")
+
+    if replacement != None:
+        seed_reminders(replacement)
+    
+    conn.commit()
+    conn.close()
+
+
 def open_and_get_dialog(driver,wait,button_xpath):
-    print("button_xpath",button_xpath)
     button = wait.until(
         EC.presence_of_element_located((By.XPATH, button_xpath))
     )
@@ -34,7 +60,14 @@ def open_and_get_dialog(driver,wait,button_xpath):
 
     button_elements = dialog.find_elements(By.XPATH,".//button")
     for button_element in button_elements:
+        wait.until(EC.text_to_be_present_in_element(button_element,""))
+        print("getting button text -> "+button_element.text)
         buttons[button_element.text] = button_element
+
+    title = dialog.find_element(By.XPATH,".//*[contains(@class,'MuiDialogTitle-root')]").text
+
+    content = dialog.find_element(By.XPATH,".//div[contains(@class,'MuiDialogContent-root')]")
+    content_text = [el.text for el in content.find_elements(By.XPATH,".//*[contains(@class,'MuiTypography-root')]")]
 
     def get_helper_text(input_name):
         return dialog.find_element(By.XPATH, f".//input[@name='{input_name}']/ancestor::div[2]/p")
@@ -43,6 +76,7 @@ def open_and_get_dialog(driver,wait,button_xpath):
         "self": dialog,
         "inputs": inputs,
         "buttons": buttons,
+        "text":{"title":title,"content":content_text},
         "get_helper_text": get_helper_text
     }
 
@@ -78,8 +112,8 @@ def post_reminder(driver,wait,reminder={"message": "New Reminder", "email": "cca
 
     return dialog
 
-def put_reminder(driver,wait,reminder,index):
-    dialog = open_and_get_dialog(driver,wait,f"//button[normalize-space()='Edit'][{index+1}]")
+def put_reminder(driver,wait,reminder,id):
+    dialog = open_and_get_dialog(driver,wait,f"//div[@data-id='reminder-{id}']//button[normalize-space()='Edit']")
 
     inputs = dialog["inputs"]
     input_message = inputs["message"]
@@ -102,7 +136,7 @@ def put_reminder(driver,wait,reminder,index):
 
     return dialog
 
-def get_reminders():
+def get_reminders(random=False):
     conn = pyodbc.connect(conn_str)
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM Reminders")
@@ -121,4 +155,92 @@ def get_reminders():
         
     return reminders
 
-__all__ = ["open_and_get_dialog","post_reminder","put_reminder","get_reminders"]
+def get_random_reminder(driver):
+    # reminders = get_reminders()
+    reminders = parse_reminders(driver)
+    if len(reminders) == 0:
+        return None
+    elif len(reminders) == 1:
+        return reminders[0]
+    index = random.randint(0,len(reminders)-1)
+  
+    return reminders[index]
+
+def get_reminder_by_id(driver,id):
+    reminders = parse_reminders(driver)
+    for reminder in reminders:
+        if reminder["id"] == id:
+            return reminder
+
+    return None
+
+# def get_reminder_by_id(id):
+#     conn = pyodbc.connect(conn_str)
+#     cursor = conn.cursor()
+#     cursor.execute(f"SELECT * FROM Reminders WHERE id={id}")
+#     result = cursor.fetchone()
+#     cursor.close()
+#     conn.close()
+
+#     if result == None:
+#         return None 
+
+#     return {
+#         "id": result[0],
+#         "message": result[1],
+#         "email": result[2],
+#         "datetime": result[3],
+#         "phone": result[4]
+#     }
+
+def format_datetime(datetime,for_front_end=True):
+    if(for_front_end):
+        return datetime.strftime("%a %b %dth %Y %I:%M %p")
+    return datetime.strftime("%m/%d/%Y %I:%M %p")
+    
+def parse_datetime(datetime_str,for_front_end=True):
+    if(for_front_end):
+        return datetime.strptime(datetime_str,"%a %b %dth %Y %I:%M %p")
+    return datetime.strptime(datetime_str,"%m/%d/%Y %I:%M %p")
+
+
+def get_date_from_now(days=3):
+    return datetime.now() + timedelta(days)
+
+def parse_reminders(driver):
+    # get all reminders on the page
+    reminders = driver.find_elements(By.XPATH,"//div[@data-id]")
+    parsed_reminders = []
+    for reminder in reminders:
+        id = reminder.get_attribute("data-id").split("-")[1]
+        message = reminder.find_element(By.XPATH,".//*[@data-id='message']").text
+        email = reminder.find_element(By.XPATH,".//*[@data-id='email']").text
+        datetime = reminder.find_element(By.XPATH,".//*[@data-id='datetime']").text
+        phone = reminder.find_element(By.XPATH,".//*[@data-id='phone']").text
+        parsed_reminders.append({
+            "id": id,
+            "message": message,
+            "email": email,
+            "datetime": datetime,
+            "phone": phone
+        })
+
+    return parsed_reminders
+
+def parse_reminder(id,driver):
+    reminder = driver.find_element(By.XPATH,f"//div[@data-id='reminder-{id}']")
+    message = reminder.find_element(By.XPATH,".//*[@data-id='message']").text
+    email = reminder.find_element(By.XPATH,".//*[@data-id='email']").text
+    datetime = reminder.find_element(By.XPATH,".//*[@data-id='datetime']").text
+    phone = reminder.find_element(By.XPATH,".//*[@data-id='phone']").text
+
+    return {
+        "id": id,
+        "message": message,
+        "email": email,
+        "datetime": datetime,
+        "phone": phone
+    }
+    
+
+__all__ = ["open_and_get_dialog","post_reminder","put_reminder","get_reminders", "get_random_reminder","get_reminder_by_id","drop_reminders","get_date_from_now", "format_datetime","parse_datetime","parse_reminders","parse_reminder",]
