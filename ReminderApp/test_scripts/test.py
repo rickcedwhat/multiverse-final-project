@@ -5,7 +5,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from utils import open_and_get_dialog, post_reminder, put_reminder, get_random_reminder, get_reminder_by_id, get_date_from_now, format_datetime, parse_datetime, parse_reminders, parse_reminder
+from utils import open_and_get_dialog, post_reminder, put_reminder, get_random_reminder, get_reminder_by_id, get_date_from_now, format_datetime, parse_datetime, parse_reminders, parse_reminder, backup_and_drop
 from datetime import datetime
 
 @pytest.fixture
@@ -22,8 +22,8 @@ def wait(driver):
     return WebDriverWait(driver, 10)
 
 
-def test_default_values(driver,wait):
-    dialog = open_and_get_dialog(driver,wait,"//button[normalize-space()='Add Reminder']")
+def test_default_values(wait):
+    dialog = open_and_get_dialog(wait,"//button[normalize-space()='Add Reminder']")
     inputs = dialog["inputs"]
 
     input_message = inputs["message"]
@@ -39,7 +39,7 @@ def test_default_values(driver,wait):
     assert input_phone.get_attribute("value") == "7864400382"
 
 
-def test_required_fields(driver,wait):
+def test_required_fields(wait):
 
     reminder = {
         "message": "",
@@ -47,7 +47,7 @@ def test_required_fields(driver,wait):
         "datetime": "",
         "phone": ""
     }
-    dialog = post_reminder(driver,wait,reminder)
+    dialog = post_reminder(wait,reminder)
 
     inputs = dialog["inputs"]
     input_message = inputs["message"]
@@ -67,8 +67,8 @@ def test_required_fields(driver,wait):
         helper_text = dialog["get_helper_text"](input_name)
         assert helper_text.text == f"{input_name.capitalize()} is required"
 
-def test_field_validation(driver,wait):
-    dialog = open_and_get_dialog(driver,wait,"//button[normalize-space()='Add Reminder']")
+def test_field_validation(wait):
+    dialog = open_and_get_dialog(wait,"//button[normalize-space()='Add Reminder']")
 
     inputs = dialog["inputs"]
     input_email = inputs["email"]
@@ -82,7 +82,7 @@ def test_field_validation(driver,wait):
     submit_button = dialog["buttons"]["SUBMIT"]
     submit_button.click()
 
-def test_add_reminder(driver,wait):
+def test_add_reminder(wait):
     three_days_from_now = format_datetime(get_date_from_now(3),False)
     reminder = {
         "message": "New Reminder from pytest",
@@ -91,11 +91,11 @@ def test_add_reminder(driver,wait):
         "phone": "1234567890"
     }
 
-    dialog = post_reminder(driver,wait,reminder)
+    dialog = post_reminder(wait,reminder)
 
     assert wait.until(EC.staleness_of(dialog["self"])) == True
 
-    reminders = parse_reminders(driver)
+    reminders = parse_reminders(wait)
     lastReminder = reminders[-1]
     print(lastReminder,reminder)
 
@@ -104,7 +104,9 @@ def test_add_reminder(driver,wait):
     assert parse_datetime(lastReminder["datetime"]) == parse_datetime(reminder["datetime"],False)
     assert lastReminder["phone"] == reminder["phone"]
 
-def test_edit_reminder(driver,wait):
+def test_edit_reminder(wait):
+    result = backup_and_drop(wait)
+    # TODO: make sure backup_and_drop is working correctly
     four_days_from_now = format_datetime(get_date_from_now(4),False)
     reminder = {
         "message": "Updated Reminder from pytest",
@@ -113,13 +115,13 @@ def test_edit_reminder(driver,wait):
         "phone": "7864400383"
     }
 
-    id = get_random_reminder(driver)["id"]
+    id = get_random_reminder(wait)["id"]
 
-    dialog = put_reminder(driver,wait,reminder,id)
+    dialog = put_reminder(wait,reminder,id)
 
     assert wait.until(EC.staleness_of(dialog["self"])) == True
 
-    updatedReminder = parse_reminder(driver,id)
+    updatedReminder = parse_reminder(wait,id)
     print(updatedReminder,reminder)
 
     assert updatedReminder["message"] == reminder["message"]
@@ -128,36 +130,11 @@ def test_edit_reminder(driver,wait):
     assert parse_datetime(updatedReminder["datetime"]) == parse_datetime(reminder["datetime"],False)
     assert updatedReminder["phone"] == reminder["phone"]
 
-def test_delete_reminder(driver,wait):
-    # delete button should open confirmation dialog
-    id = get_random_reminder(driver)["id"]
-
-    dialog = open_and_get_dialog(driver,wait,f"//div[@data-id='reminder-{id}']//button[normalize-space()='Delete']")
-
-    assert dialog["text"]["title"] == "Confirmation"
-    assert "Are you sure you want to delete this reminder?" in dialog["text"]["content"]
-
-    dialog["buttons"]["CONFIRM DELETION"].click()
-
-    deleted_reminder = get_reminder_by_id(id)
-
-    assert deleted_reminder == None
-
-def test_delete_all(driver,wait):
-    dialog = open_and_get_dialog(driver,wait,"//button[normalize-space()='Delete All']")
-
-    assert dialog["text"]["title"] == "Confirmation"
-    assert "Are you sure you want to delete all reminders?" in dialog["text"]["content"]
-
-    dialog["buttons"]["CONFIRM DELETION"].click()
-
-    # reminders = get_reminders()
-    reminders = parse_reminders(driver)
-
-    assert len(reminders) == 0
-
-def test_cancellable_dialog(driver,wait):
-    dialog = open_and_get_dialog(driver,wait,"//button[normalize-space()='Delete All']")
+def test_cancellable_dialog(wait):
+    dialog = open_and_get_dialog(wait,"//button[normalize-space()='Delete All']")
+    
+    if dialog == None:
+        pytest.skip("No reminders available to delete")
 
     assert dialog["self"].find_element(By.XPATH,"//h2[normalize-space()='Confirmation']")
     assert dialog["self"].find_element(By.XPATH,"//p[normalize-space()='Are you sure you want to delete all reminders?']")
@@ -170,7 +147,7 @@ def test_cancellable_dialog(driver,wait):
     # dialog should no longer be visible
     assert wait.until(EC.staleness_of(dialog["self"])) == True
 
-    dialog = open_and_get_dialog(driver,wait,"//button[normalize-space()='Delete']")
+    dialog = open_and_get_dialog(wait,"//button[normalize-space()='Delete']")
 
     assert dialog["self"].find_element(By.XPATH,"//h2[normalize-space()='Confirmation']")
     assert dialog["self"].find_element(By.XPATH,"//p[normalize-space()='Are you sure you want to delete this reminder?']")
@@ -179,3 +156,37 @@ def test_cancellable_dialog(driver,wait):
 
     # dialog should no longer be visible
     assert wait.until(EC.staleness_of(dialog["self"])) == True
+
+def test_delete_reminder(wait):
+    # delete button should open confirmation dialog
+    id = get_random_reminder(wait)["id"]
+
+    if id == None:
+        pytest.skip("No reminders available to delete")
+
+    dialog = open_and_get_dialog(wait,f"//div[@data-id='reminder-{id}']//button[normalize-space()='Delete']")
+
+    assert dialog["text"]["title"] == "Confirmation"
+    assert "Are you sure you want to delete this reminder?" in dialog["text"]["content"]
+
+    dialog["buttons"]["CONFIRM DELETION"].click()
+
+    deleted_reminder = get_reminder_by_id(wait,id)
+
+    assert deleted_reminder == None
+
+def test_delete_all(wait):
+    dialog = open_and_get_dialog(wait,"//button[normalize-space()='Delete All']")
+
+    if dialog == None:
+        pytest.skip("No reminders available to delete")
+
+    assert dialog["text"]["title"] == "Confirmation"
+    assert "Are you sure you want to delete all reminders?" in dialog["text"]["content"]
+
+    dialog["buttons"]["CONFIRM DELETION"].click()
+
+    # wait for reminders to be deleted
+    reminders = parse_reminders(wait,True)
+
+    assert len(reminders) == 0

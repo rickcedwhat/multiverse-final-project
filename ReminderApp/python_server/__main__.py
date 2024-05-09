@@ -5,6 +5,7 @@ import re
 from datetime import datetime
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from typing import List
 
 class Reminder(BaseModel):
     message: str
@@ -195,12 +196,14 @@ def reformat_reminders():
     conn = pyodbc.connect(conn_str)
     cursor = conn.cursor()
 
-    # Execute the DROP statement
-    cursor.execute("DROP TABLE Reminders")
+    create_reminder_table(cursor)
+
+    # # Execute the DROP statement
+    # cursor.execute("DROP TABLE Reminders")
     
-    # Execute the CREATE statement
-    print("CREATE TABLE Reminders ({})".format(" ".join([f"{column[0]} {column[1]}" for column in table_columns])))
-    cursor.execute("CREATE TABLE Reminders ({})".format(", ".join([f"{column[0]} {column[1]}" for column in table_columns])))
+    # # Execute the CREATE statement
+    # print("CREATE TABLE Reminders ({})".format(" ".join([f"{column[0]} {column[1]}" for column in table_columns])))
+    # cursor.execute("CREATE TABLE Reminders ({})".format(", ".join([f"{column[0]} {column[1]}" for column in table_columns])))
     
     # Commit the transaction
     conn.commit()
@@ -211,4 +214,67 @@ def reformat_reminders():
     return {
         "status": "success"
     }
+
+def create_reminder_table(cursor):
+    print("Creating reminder table")
+    # drop table if it exists and create a new reminder table based on the Reminder model
+    cursor.execute("DROP TABLE IF EXISTS Reminders")
+    
+    # Execute the CREATE statement
+    cursor.execute("CREATE TABLE Reminders ({})".format(", ".join([f"{column[0]} {column[1]}" for column in table_columns])))
+
+@app.get("/backup_and_drop")
+def backup_and_drop():
+    print("Backing up and dropping reminders")
+    # drop reminders table and create a new reminder table based on the Reminder model
+
+    # Establish a connection to the SQL Server
+    conn = pyodbc.connect(conn_str)
+    cursor = conn.cursor()
+
+    # Execute the SELECT statement
+    cursor.execute("SELECT * FROM Reminders")
+    rows = cursor.fetchall()
+    reminders = []
+    for row in rows:
+        reminders.append({
+            "message": row[1],
+            "email": row[2],
+            "datetime": row[3],
+            "phone": row[4]            
+        })
+
+    create_reminder_table(cursor)
+    # Commit the transaction
+    conn.commit()
+
+    # Close the connection
+    conn.close()
+
+    return reminders
+
+@app.post("/seed")
+def seed_reminders(seed:List[Reminder]):
+    print("Seeding reminders")
+    
+    # Establish a connection to the SQL Server
+    conn = pyodbc.connect(conn_str)
+    cursor = conn.cursor()
+
+    create_reminder_table(cursor)
+
+    for reminder in seed:
+        datetime_obj = datetime.fromisoformat(reminder.datetime)
+        # Execute the INSERT statement
+        cursor.execute("INSERT INTO Reminders (message, email, datetime,phone) VALUES (?, ?, ?, ?)",
+                    reminder.message, reminder.email, datetime_obj, reminder.phone)
+    
+    # Commit the transaction
+    conn.commit()
+    conn.close()
+    return {
+        "status": "success"
+    }
+
+
 

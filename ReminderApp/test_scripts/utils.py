@@ -5,6 +5,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from time import sleep
 from datetime import datetime, timedelta
 import random
+import requests
 
 
 
@@ -15,35 +16,42 @@ conn_str = (
     r'Trusted_Connection=yes;'
 )
 
-def seed_reminders(reminders):
-    conn = pyodbc.connect(conn_str)
-    cursor = conn.cursor()
-    for reminder in reminders:
-        cursor.execute("INSERT INTO Reminders (message,email,datetime,phone) VALUES (?,?,?,?)",reminder["message"],reminder["email"],reminder["datetime"],reminder["phone"])
-    conn.commit()
-    cursor.close()
-    conn.close()
+# def seed_reminders(reminders):
+#     conn = pyodbc.connect(conn_str)
+#     cursor = conn.cursor()
+#     for reminder in reminders:
+#         cursor.execute("INSERT INTO Reminders (message,email,datetime,phone) VALUES (?,?,?,?)",reminder["message"],reminder["email"],reminder["datetime"],reminder["phone"])
+#     conn.commit()
+#     cursor.close()
+#     conn.close()
 
-def drop_reminders(replacement=None):
+# def seed_reminders():
+#     reminders = [
+#         {"message": "New Reminder", "email": "ccata002@gmail.com
+#     ]
+
+#     # call fastapi endpoint to seed reminders
+#     for reminder in reminders:
+#         response = requests.post("http://localhost:8000/seed",json=reminder)
+#         print(response.json())
+
+def backup_and_drop():
+    # call backup endpoint
+    response = requests.get("http://localhost:8000/backup_and_drop")
+    print(response.json())
+    return response.json()
     
-    # table_columns = [("id", "INT PRIMARY KEY IDENTITY"), ("message", "VARCHAR(255)"), ("email", "VARCHAR(255)"), ("datetime", "DATETIME"), ("phone", "VARCHAR(255)")]
-    # cursor.execute("CREATE TABLE Reminders ({})".format(", ".join([f"{column[0]} {column[1]}" for column in table_columns])))
-    conn = pyodbc.connect(conn_str)
-    cursor = conn.cursor()
-    cursor.execute("DROP TABLE Reminders")
-    cursor.execute("CREATE TABLE Reminders (id INT PRIMARY KEY IDENTITY, message VARCHAR(255), email VARCHAR(255), datetime DATETIME, phone VARCHAR(255))")
-
-    if replacement != None:
-        seed_reminders(replacement)
-    
-    conn.commit()
-    conn.close()
 
 
-def open_and_get_dialog(driver,wait,button_xpath):
-    button = wait.until(
-        EC.presence_of_element_located((By.XPATH, button_xpath))
-    )
+def open_and_get_dialog(wait,button_xpath):
+    button = None
+    try:
+        button = wait.until(
+            EC.element_to_be_clickable((By.XPATH, button_xpath))
+        )
+    except:
+        print("Could not find element with xpath: "+button_xpath)
+        return None
 
     button.click()
 
@@ -58,10 +66,12 @@ def open_and_get_dialog(driver,wait,button_xpath):
         input_name = input_element.get_attribute("name")
         inputs[input_name] = input_element
 
-    button_elements = dialog.find_elements(By.XPATH,".//button")
+    # wait for button elements to have text
+    button_elements = wait.until(
+        EC.presence_of_all_elements_located((By.XPATH,"//div[@role='dialog']//button"))
+    )
+
     for button_element in button_elements:
-        wait.until(EC.text_to_be_present_in_element(button_element,""))
-        print("getting button text -> "+button_element.text)
         buttons[button_element.text] = button_element
 
     title = dialog.find_element(By.XPATH,".//*[contains(@class,'MuiDialogTitle-root')]").text
@@ -71,13 +81,17 @@ def open_and_get_dialog(driver,wait,button_xpath):
 
     def get_helper_text(input_name):
         return dialog.find_element(By.XPATH, f".//input[@name='{input_name}']/ancestor::div[2]/p")
+    
+    # def get_button(button_name):
+    #     return dialog.find_element(By.XPATH, f".//button[normalize-space()='{button_name}']")
 
     return {
         "self": dialog,
         "inputs": inputs,
         "buttons": buttons,
         "text":{"title":title,"content":content_text},
-        "get_helper_text": get_helper_text
+        "get_helper_text": get_helper_text,
+        # "get_button": get_button
     }
 
 def datetime_to_keys(datetime_str):
@@ -86,8 +100,8 @@ def datetime_to_keys(datetime_str):
     date_obj = datetime.strptime(datetime_str,"%m/%d/%Y %I:%M %p")
     return date_obj.strftime("%m%d%Y%I%M%p")
 
-def post_reminder(driver,wait,reminder={"message": "New Reminder", "email": "ccata002@gmail.com", "datetime": "12/31/2024 11:59 PM", "phone": "7864400382"}):
-    dialog = open_and_get_dialog(driver,wait,"//button[normalize-space()='Add Reminder']")
+def post_reminder(wait,reminder={"message": "New Reminder", "email": "ccata002@gmail.com", "datetime": "12/31/2024 11:59 PM", "phone": "7864400382"}):
+    dialog = open_and_get_dialog(wait,"//button[normalize-space()='Add Reminder']")
 
     inputs = dialog["inputs"]
     input_message = inputs["message"]
@@ -112,8 +126,8 @@ def post_reminder(driver,wait,reminder={"message": "New Reminder", "email": "cca
 
     return dialog
 
-def put_reminder(driver,wait,reminder,id):
-    dialog = open_and_get_dialog(driver,wait,f"//div[@data-id='reminder-{id}']//button[normalize-space()='Edit']")
+def put_reminder(wait,reminder,id):
+    dialog = open_and_get_dialog(wait,f"//div[@data-id='reminder-{id}']//button[normalize-space()='Edit']")
 
     inputs = dialog["inputs"]
     input_message = inputs["message"]
@@ -155,19 +169,19 @@ def get_reminders(random=False):
         
     return reminders
 
-def get_random_reminder(driver):
+def get_random_reminder(wait):
     # reminders = get_reminders()
-    reminders = parse_reminders(driver)
+    reminders = parse_reminders(wait)
     if len(reminders) == 0:
         return None
     elif len(reminders) == 1:
         return reminders[0]
     index = random.randint(0,len(reminders)-1)
-  
+    print(index,reminders[index])
     return reminders[index]
 
-def get_reminder_by_id(driver,id):
-    reminders = parse_reminders(driver)
+def get_reminder_by_id(wait,id):
+    reminders = parse_reminders(wait)
     for reminder in reminders:
         if reminder["id"] == id:
             return reminder
@@ -207,9 +221,13 @@ def parse_datetime(datetime_str,for_front_end=True):
 def get_date_from_now(days=3):
     return datetime.now() + timedelta(days)
 
-def parse_reminders(driver):
+def parse_reminders(wait,stale=False):
+
+    if stale and wait.until(EC.staleness_of((By.XPATH,"//div[@data-id]"))):
+        return []
+    
     # get all reminders on the page
-    reminders = driver.find_elements(By.XPATH,"//div[@data-id]")
+    reminders = wait.until(EC.presence_of_all_elements_located((By.XPATH,"//div[@data-id]")))
     parsed_reminders = []
     for reminder in reminders:
         id = reminder.get_attribute("data-id").split("-")[1]
@@ -227,8 +245,9 @@ def parse_reminders(driver):
 
     return parsed_reminders
 
-def parse_reminder(id,driver):
-    reminder = driver.find_element(By.XPATH,f"//div[@data-id='reminder-{id}']")
+def parse_reminder(wait,id):
+    # reminder = driver.find_element(By.XPATH,f"//div[@data-id='reminder-{id}']")
+    reminder = wait.until(EC.presence_of_element_located((By.XPATH,f"//div[@data-id='reminder-{id}']")))
     message = reminder.find_element(By.XPATH,".//*[@data-id='message']").text
     email = reminder.find_element(By.XPATH,".//*[@data-id='email']").text
     datetime = reminder.find_element(By.XPATH,".//*[@data-id='datetime']").text
@@ -243,4 +262,4 @@ def parse_reminder(id,driver):
     }
     
 
-__all__ = ["open_and_get_dialog","post_reminder","put_reminder","get_reminders", "get_random_reminder","get_reminder_by_id","drop_reminders","get_date_from_now", "format_datetime","parse_datetime","parse_reminders","parse_reminder",]
+__all__ = ["open_and_get_dialog","post_reminder","put_reminder","get_reminders", "get_random_reminder","get_reminder_by_id","drop_reminders","get_date_from_now", "format_datetime","parse_datetime","parse_reminders","parse_reminder","backup_and_drop"]

@@ -18,12 +18,27 @@ const Reminders = () => {
   const [currentReminder, setCurrentReminder] = useState<
     ReminderDB | Partial<ReminderDB> | null
   >(null);
+  const [isSending, setIsSending] = useState(false);
+
+  const deleteAllMutation = useMutation({
+    mutationFn: deleteAllReminders,
+    onSuccess: () => {
+      // Invalidate and refetch
+      queryClient.invalidateQueries({ queryKey: ["reminders"] });
+    },
+  });
+
+  const handleDeleteAll = async () => {
+    setIsSending(true);
+    await deleteAllMutation.mutateAsync();
+    setIsSending(false);
+  };
 
   const { confirmation, showConfirmation } = useConfirmation({
     message: "Are you sure you want to delete all reminders?",
     confirmConfig: {
       text: "Confirm Deletion",
-      action: deleteAllReminders,
+      action: handleDeleteAll,
       variant: "contained",
       color: "error",
     },
@@ -110,7 +125,11 @@ const Reminders = () => {
       <Button variant="contained" onClick={createNewReminder}>
         Add Reminder
       </Button>
-      <Button variant="contained" onClick={showConfirmation}>
+      <Button
+        variant="contained"
+        onClick={showConfirmation}
+        disabled={!reminders?.length}
+      >
         Delete All
       </Button>
       {confirmation}
