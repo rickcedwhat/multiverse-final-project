@@ -187,34 +187,6 @@ def delete_all_reminders():
         "status": "success"
     }
 
-@app.get("/reformat")
-def reformat_reminders():
-    print("Reformatting reminders")
-    # drop reminders table and create a new reminder table based on the Reminder model
-
-    # Establish a connection to the SQL Server
-    conn = pyodbc.connect(conn_str)
-    cursor = conn.cursor()
-
-    create_reminder_table(cursor)
-
-    # # Execute the DROP statement
-    # cursor.execute("DROP TABLE Reminders")
-    
-    # # Execute the CREATE statement
-    # print("CREATE TABLE Reminders ({})".format(" ".join([f"{column[0]} {column[1]}" for column in table_columns])))
-    # cursor.execute("CREATE TABLE Reminders ({})".format(", ".join([f"{column[0]} {column[1]}" for column in table_columns])))
-    
-    # Commit the transaction
-    conn.commit()
-
-    # Close the connection
-    conn.close()
-
-    return {
-        "status": "success"
-    }
-
 def create_reminder_table(cursor):
     print("Creating reminder table")
     # drop table if it exists and create a new reminder table based on the Reminder model
