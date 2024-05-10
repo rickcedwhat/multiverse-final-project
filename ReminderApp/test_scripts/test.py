@@ -5,7 +5,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from utils import open_and_get_dialog, post_reminder, put_reminder, get_random_reminder, get_reminder_by_id, get_date_from_now, format_datetime, parse_datetime, parse_reminders, parse_reminder, backup_and_drop
+from utils import open_and_get_dialog, post_reminder, put_reminder, get_random_reminder, get_reminder_by_id, get_date_from_now, format_datetime, parse_datetime, parse_reminders, parse_reminder, backup_and_drop, seed_reminders
 from datetime import datetime
 
 @pytest.fixture
@@ -20,6 +20,19 @@ def driver():
 @pytest.fixture
 def wait(driver):
     return WebDriverWait(driver, 10)
+
+seed = [
+    {"message": "Reminder 1", "email": "ccata002@gmail.com", "datetime": "2025-01-01T12:00:00", "phone": "1234567890"},
+    {"message": "Reminder 2", "email": "ccata002@gmail.com", "datetime": "2025-01-02T12:00:00", "phone": "0987654321"}
+]
+
+# before every test, drop all reminders
+@pytest.fixture(autouse=True)
+def drop_reminders():
+    table = backup_and_drop()
+    seed_reminders(seed)
+    yield
+    seed_reminders(table)
 
 
 def test_default_values(wait):
@@ -105,8 +118,6 @@ def test_add_reminder(wait):
     assert lastReminder["phone"] == reminder["phone"]
 
 def test_edit_reminder(wait):
-    result = backup_and_drop(wait)
-    # TODO: make sure backup_and_drop is working correctly
     four_days_from_now = format_datetime(get_date_from_now(4),False)
     reminder = {
         "message": "Updated Reminder from pytest",

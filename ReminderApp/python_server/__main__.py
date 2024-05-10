@@ -256,6 +256,7 @@ def backup_and_drop():
 @app.post("/seed")
 def seed_reminders(seed:List[Reminder]):
     print("Seeding reminders")
+    print(seed,"from fastapi")
     
     # Establish a connection to the SQL Server
     conn = pyodbc.connect(conn_str)

@@ -16,31 +16,14 @@ conn_str = (
     r'Trusted_Connection=yes;'
 )
 
-# def seed_reminders(reminders):
-#     conn = pyodbc.connect(conn_str)
-#     cursor = conn.cursor()
-#     for reminder in reminders:
-#         cursor.execute("INSERT INTO Reminders (message,email,datetime,phone) VALUES (?,?,?,?)",reminder["message"],reminder["email"],reminder["datetime"],reminder["phone"])
-#     conn.commit()
-#     cursor.close()
-#     conn.close()
-
-# def seed_reminders():
-#     reminders = [
-#         {"message": "New Reminder", "email": "ccata002@gmail.com
-#     ]
-
-#     # call fastapi endpoint to seed reminders
-#     for reminder in reminders:
-#         response = requests.post("http://localhost:8000/seed",json=reminder)
-#         print(response.json())
-
 def backup_and_drop():
     # call backup endpoint
     response = requests.get("http://localhost:8000/backup_and_drop")
-    print(response.json())
     return response.json()
     
+def seed_reminders(reminders):
+    # call seed endpoint
+    requests.post("http://localhost:8000/seed",json=reminders)
 
 
 def open_and_get_dialog(wait,button_xpath):
@@ -188,24 +171,6 @@ def get_reminder_by_id(wait,id):
 
     return None
 
-# def get_reminder_by_id(id):
-#     conn = pyodbc.connect(conn_str)
-#     cursor = conn.cursor()
-#     cursor.execute(f"SELECT * FROM Reminders WHERE id={id}")
-#     result = cursor.fetchone()
-#     cursor.close()
-#     conn.close()
-
-#     if result == None:
-#         return None 
-
-#     return {
-#         "id": result[0],
-#         "message": result[1],
-#         "email": result[2],
-#         "datetime": result[3],
-#         "phone": result[4]
-#     }
 
 def format_datetime(datetime,for_front_end=True):
     if(for_front_end):
@@ -223,7 +188,7 @@ def get_date_from_now(days=3):
 
 def parse_reminders(wait,stale=False):
 
-    if stale and wait.until(EC.staleness_of((By.XPATH,"//div[@data-id]"))):
+    if stale and wait.until(EC.invisibility_of_element((By.XPATH,"//div[@data-id]"))):
         return []
     
     # get all reminders on the page
@@ -262,4 +227,4 @@ def parse_reminder(wait,id):
     }
     
 
-__all__ = ["open_and_get_dialog","post_reminder","put_reminder","get_reminders", "get_random_reminder","get_reminder_by_id","drop_reminders","get_date_from_now", "format_datetime","parse_datetime","parse_reminders","parse_reminder","backup_and_drop"]
+__all__ = ["open_and_get_dialog","post_reminder","put_reminder","get_reminders", "get_random_reminder","get_reminder_by_id","drop_reminders","get_date_from_now", "format_datetime","parse_datetime","parse_reminders","parse_reminder","backup_and_drop","seed_reminders"]
